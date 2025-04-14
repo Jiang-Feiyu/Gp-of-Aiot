@@ -1,0 +1,5 @@
+__MACOSX/**
+benchmark/**
+.vscode/**
+esp32c5/csi_recv/build/**
+esp32c5/csi_send/build/**
