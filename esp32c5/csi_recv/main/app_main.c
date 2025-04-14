@@ -71,35 +71,35 @@
  // NOTE: Please do not change the function names and return types.
  bool motion_detection() {
      // TODO: Implement motion detection logic using CSI data in CSI_Q
-     
+     return false;
  }
  
  int breathing_rate_estimation() {
      // TODO: Implement breathing rate estimation using CSI data in CSI_Q
-     
+     return 0;
  }
  
- static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event) {
-     switch (event->event_id) {
-         case MQTT_EVENT_CONNECTED:
-             ESP_LOGI(TAG, "MQTT连接成功");
-             break;
-         case MQTT_EVENT_DISCONNECTED:
-             ESP_LOGI(TAG, "MQTT连接断开");
-             break;
-         case MQTT_EVENT_ERROR:
-             ESP_LOGE(TAG, "MQTT事件错误");
-             break;
-         default:
-             ESP_LOGI(TAG, "MQTT事件: %d", event->event_id);
-             break;
-     }
-     return ESP_OK;
- }
+ static void mqtt_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+    esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
+    switch (event->event_id) {
+        case MQTT_EVENT_CONNECTED:
+            ESP_LOGI(TAG, "MQTT连接成功");
+            break;
+        case MQTT_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG, "MQTT连接断开");
+            break;
+        case MQTT_EVENT_ERROR:
+            ESP_LOGE(TAG, "MQTT事件错误");
+            break;
+        default:
+            ESP_LOGI(TAG, "MQTT事件: %d", event->event_id);
+            break;
+    }
+}
  
  void mqtt_init() {
      esp_mqtt_client_config_t mqtt_config = {
-         .uri = MQTT_BROKER_URI,
+         .broker.address.uri = MQTT_BROKER_URI,
      };
  
      client = esp_mqtt_client_init(&mqtt_config);
