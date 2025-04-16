@@ -2,5 +2,6 @@ __MACOSX/**
 benchmark/**
 .vscode/**
 esp32c5/csi_recv/build/
-esp32c5/csi_send/build/git
+esp32c5/csi_send/build/
+esp32c5/motion/build/
 .DS_Store
