@@ -70,9 +70,32 @@
  // Modify the following functions to implement your algorithms.
  // NOTE: Please do not change the function names and return types.
  bool motion_detection() {
-     // TODO: Implement motion detection logic using CSI data in CSI_Q
-     return false;
- }
+    if (CSI_Q_INDEX < CSI_FIFO_LENGTH) {
+        return false;  // 数据不足,返回无运动
+    }
+
+    // 计算最近CSI_FIFO_LENGTH个样本的方差
+    float mean = 0.0;
+    float variance = 0.0;
+    int start_idx = CSI_Q_INDEX - CSI_FIFO_LENGTH;
+    
+    // 计算均值
+    for (int i = 0; i < CSI_FIFO_LENGTH; i++) {
+        mean += CSI_Q[start_idx + i];
+    }
+    mean /= CSI_FIFO_LENGTH;
+    
+    // 计算方差
+    for (int i = 0; i < CSI_FIFO_LENGTH; i++) {
+        float diff = CSI_Q[start_idx + i] - mean;
+        variance += diff * diff;
+    }
+    variance /= CSI_FIFO_LENGTH;
+
+    // 设定方差阈值,超过阈值判定为有运动
+    const float VARIANCE_THRESHOLD = 100.0;  
+    return (variance > VARIANCE_THRESHOLD);
+}
  
  int breathing_rate_estimation() {
      // TODO: Implement breathing rate estimation using CSI data in CSI_Q
@@ -371,8 +394,8 @@
  
      // 1. Fill the information of your group members
      ESP_LOGI(TAG, "================ GROUP INFO ================");
-     const char *TEAM_MEMBER[] = {"a", "b", "c", "d"};
-     const char *TEAM_UID[] = {"1", "2", "3", "4"};
+     const char *TEAM_MEMBER[] = {"JIANG Feiyu", "Wang Shiwei", "Cao Shuochen", "Wu Jiaxu"};
+     const char *TEAM_UID[] = {"3035770800", "3036410392", "3", "4"};
      ESP_LOGI(TAG, "TEAM_MEMBER: %s, %s, %s, %s | TEAM_UID: %s, %s, %s, %s",
                  TEAM_MEMBER[0], TEAM_MEMBER[1], TEAM_MEMBER[2], TEAM_MEMBER[3],
                  TEAM_UID[0], TEAM_UID[1], TEAM_UID[2], TEAM_UID[3]);
