@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>CSI motion test result report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 136px;
+            color: blueviolet;
+            text-align: center;
+        }
+
+        h2 {
+            color: #3498db;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f5f5f5;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .motion {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .static {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.8em;
+        }
+
+        .charts {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .chart {
+            margin: 10px;
+            text-align: center;
+            width: calc(50% - 20px); /* 一行显示两个，减去左右外边距 */
+        }
+
+        .chart img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .chart img:hover {
+            transform: scale(1.05);
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            animation-name: zoom;
+            animation-duration: 0.6s;
+        }
+
+        @keyframes zoom {
+            from {
+                transform: scale(0)
+            }
+
+            to {
+                transform: scale(1)
+            }
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* 滑动图片容器样式 */
+        .slideshow-container {
+            position: relative;
+            margin: auto;
+        }
+
+        .mySlides {
+            display: none;
+        }
+
+        .prev,
+        .next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            width: auto;
+            padding: 16px;
+            margin-top: -22px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            transition: 0.6s ease;
+            border-radius: 0 3px 3px 0;
+            user-select: none;
+            background-color: black;
+        }
+
+        .next {
+            right: 0;
+            border-radius: 3px 0 0 3px;
+        }
+
+        .prev:hover,
+        .next:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h1>CSI motion test result report</h1>
+    <div class="summary">
+        <h2>Summary</h2>
+        <p>Usage characteristics: Maximum amplitude change</p>
+        <p>decision threshold: 2.4126</p>
+        <p>Total number of test samples: 30</p>
+        <p>Number of motion samples: 22</p>
+        <p>Number of still samples: 8</p>
+    </div>
+
+    <h2>Test result details</h2>
+        <table>
+            <tr>
+                <th>serial number</th>
+                <th>filename</th>
+                <th>Predict results</th>
+            </tr>
+
+            <tr>
+                <td>1</td>
+                <td>CSI_20250220_205713.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>2</td>
+                <td>CSI_20250220_205723.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>3</td>
+                <td>CSI_20250220_205733.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>4</td>
+                <td>CSI_20250220_205803.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>5</td>
+                <td>CSI_20250220_205822.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>6</td>
+                <td>CSI_20250220_205834.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>7</td>
+                <td>CSI_20250220_205845.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>8</td>
+                <td>CSI_20250220_205855.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>9</td>
+                <td>CSI_20250220_205906.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>10</td>
+                <td>CSI_20250220_205928.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>11</td>
+                <td>CSI_20250220_205943.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>12</td>
+                <td>CSI_20250220_205958.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>13</td>
+                <td>CSI_20250220_210036.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>14</td>
+                <td>CSI_20250220_210046.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>15</td>
+                <td>CSI_20250220_210058.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>16</td>
+                <td>CSI_20250220_210110.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>17</td>
+                <td>CSI_20250220_210123.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>18</td>
+                <td>CSI_20250220_210141.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>19</td>
+                <td>CSI_20250220_210151.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>20</td>
+                <td>CSI_20250220_210204.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>21</td>
+                <td>CSI_20250220_210911.csv</td>
+                <td class="static">No motion</td>
+            </tr>
+
+            <tr>
+                <td>22</td>
+                <td>CSI_20250220_210928.csv</td>
+                <td class="static">No motion</td>
+            </tr>
+
+            <tr>
+                <td>23</td>
+                <td>CSI_20250220_210942.csv</td>
+                <td class="static">No motion</td>
+            </tr>
+
+            <tr>
+                <td>24</td>
+                <td>CSI_20250220_211010.csv</td>
+                <td class="static">No motion</td>
+            </tr>
+
+            <tr>
+                <td>25</td>
+                <td>CSI_20250220_211023.csv</td>
+                <td class="static">No motion</td>
+            </tr>
+
+            <tr>
+                <td>26</td>
+                <td>CSI_20250220_211035.csv</td>
+                <td class="static">No motion</td>
+            </tr>
+
+            <tr>
+                <td>27</td>
+                <td>CSI_20250220_211055.csv</td>
+                <td class="static">No motion</td>
+            </tr>
+
+            <tr>
+                <td>28</td>
+                <td>CSI_20250220_211107.csv</td>
+                <td class="static">No motion</td>
+            </tr>
+
+            <tr>
+                <td>29</td>
+                <td>CSI_20250220_211121.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+            <tr>
+                <td>30</td>
+                <td>CSI_20250220_211138.csv</td>
+                <td class="motion">There is motion</td>
+            </tr>
+
+        </table>
+
+    <h2>Implementation process display</h2>
+    <div class="slideshow-container">
+        <div class="mySlides">
+            <img src="motion_detection/motion_output/visualization/features_CSI_20250220_205928.csv.png" style="width:60%">
+        </div>
+        <div class="mySlides">
+            <img src="motion_detection/motion_output/visualization/features_CSI_20250220_205607.csv.png" style="width:60%">
+        </div>
+        <div class="mySlides">
+            <img src="/breathing_rate/img/breathing_rate_20250227_191018.png" style="width:60%">
+        </div>
+        <div class="mySlides">
+            <img src="/breathing_rate/img/breathing_rate_20250227_193124.png" style="width:60%">
+        </div>
+        <div class="mySlides">
+            <img src="/breathing_rate/img/breathing_rate_20250227_193342.png" style="width:60%">
+        </div>
+        <div class="mySlides">
+            <img src="/breathing_rate/img/breathing_rate_20250227_200223.png" style="width:60%">
+        </div>
+        <div class="mySlides">
+            <img src="/breathing_rate/img/breathing_rate_20250227_201424.png" style="width:60%">
+        </div>
+        <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+        <a class="next" onclick="plusSlides(1)">&#10095;</a>
+    </div>
+
+
+    <h2>Visualize the results</h2>
+    <div class="charts">
+        <div class="chart">
+            <h2>Feature distribution comparison</h2>
+            <img src="motion_detection/motion_output/visualization/feature_distributions.png" alt="特征分布对比" onclick="openModal(this.src)">
+        </div>
+        <div class="chart">
+            <h2>Decision thresholds and feature distributions</h2>
+            <img src="motion_detection/motion_output/visualization/decision_boundary.png" alt="决策阈值与特征分布" onclick="openModal(this.src)">
+        </div>
+        <div class="chart">
+            <h2>CA feature visualization</h2>
+            <img src="motion_detection/motion_output/visualization/pca_visualization.png" alt="PCA特征可视化" onclick="openModal(this.src)">
+        </div>
+        <div class="chart">
+            <h2>Confusion matrix</h2>
+            <img src="motion_detection/motion_output/visualization/confusion_matrix.png" alt="混淆矩阵" onclick="openModal(this.src)">
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>生成时间: 2025-04-16 11:24:27</p>
+        <p>CSI运动检测系统 - 基于Wi-Fi信号的人体运动感知</p>
+    </div>
+</div>
+<!-- 模态框 -->
+<div id="myModal" class="modal">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="img01">
+</div>
+
+<script>
+    var slideIndex = 1;
+    showSlides(slideIndex);
+
+    function plusSlides(n) {
+        showSlides(slideIndex += n);
+    }
+
+    function showSlides(n) {
+        var i;
+        var slides = document.getElementsByClassName("mySlides");
+        if (n > slides.length) {
+            slideIndex = 1;
+        }
+        if (n < 1) {
+            slideIndex = slides.length;
+        }
+        for (i = 0; i < slides.length; i++) {
+            slides[i].style.display = "none";
+        }
+        slides[slideIndex - 1].style.display = "block";
+    }
+
+    function openModal(imgSrc) {
+        var modal = document.getElementById('myModal');
+        var modalImg = document.getElementById('img01');
+        modal.style.display = "block";
+        modalImg.src = imgSrc;
+        var span = document.getElementsByClassName("close")[0];
+        span.onclick = function () {
+            modal.style.display = "none";
+        }
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    }
+</script>
+</body>
+
+</html>

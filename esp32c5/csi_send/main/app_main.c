@@ -36,9 +36,9 @@
 #define CONFIG_WIFI_5G_PROTOCOL             WIFI_PROTOCOL_11N
 #define CONFIG_ESP_NOW_PHYMODE           WIFI_PHY_MODE_HT20
 #define CONFIG_ESP_NOW_RATE             WIFI_PHY_RATE_MCS0_LGI
-#define CONFIG_SEND_FREQUENCY               100
+#define CONFIG_SEND_FREQUENCY               10
 
-static const uint8_t CONFIG_CSI_SEND_MAC[] = {0x1a, 0x00, 0x00, 0x00, 0x00, 0x00};
+static const uint8_t CONFIG_CSI_SEND_MAC[] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0x00};
 static const char *TAG = "csi_send";
 
 static void wifi_init()

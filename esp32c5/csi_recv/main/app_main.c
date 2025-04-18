@@ -34,72 +34,254 @@
  * Have fun building!
  */
 
-
- #include <stdio.h>
- #include <string.h>
- #include <stdlib.h>
- #include <math.h>
- #include "nvs_flash.h"
- #include "esp_mac.h"
- #include "rom/ets_sys.h"
- #include "esp_log.h"
- #include "esp_wifi.h"
- #include "esp_netif.h"
- #include "esp_now.h"
- #include "mqtt_client.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include "nvs_flash.h"
+#include "esp_mac.h"
+#include "rom/ets_sys.h"
+#include "esp_log.h"
+#include "esp_wifi.h"
+#include "esp_netif.h"
+#include "esp_now.h"
+#include "mqtt_client.h"
+#include "esp_timer.h"
 //  #include "esp_dsp.h"
  
- #define MQTT_BROKER_URI "192.168.43.16"
- #define MQTT_TOPIC "esp32/data"
+#define MQTT_BROKER_URI "mqtt://192.168.43.16"
+#define MQTT_TOPIC "esp32/data"
+#define MQTT_PORT 1883
+static const char *TAG;
  
- static const char *TAG = "csi_recv";
- static esp_mqtt_client_handle_t client = NULL;
+static esp_mqtt_client_handle_t client = NULL;
  
- // [1] YOUR CODE HERE
- #define CSI_BUFFER_LENGTH 800
- #define CSI_FIFO_LENGTH 100
- static int16_t CSI_Q[CSI_BUFFER_LENGTH];
- static int CSI_Q_INDEX = 0; // CSI Buffer Index
- // Enable/Disable CSI Buffering. 1: Enable, using buffer, 0: Disable, using serial output
- static bool CSI_Q_ENABLE = 1; 
- static void csi_process(const int8_t *csi_data, int length);
- // [1] END OF YOUR CODE
+// [1] YOUR CODE HERE
+#define CSI_BUFFER_TIME 3000  //ms
+#define SAMPLE_RATE 50
+#define BUFFER_SIZE ((CSI_BUFFER_TIME * SAMPLE_RATE) / 1000)
+#define FRAME_LENGTH 114
+#define N_SUBCARRIERS 57
+#define MOTION_THRESHOLD 0.15
+#define CONFIRMATION_THRESHOLD 2
+#define BREATHING_MIN_BPM 6
+#define BREATHING_MAX_BPM 30
+
+// Enable/Disable CSI Buffering. 1: Enable, using buffer, 0: Disable, using serial output
+static bool CSI_Q_ENABLE = 1; 
+static void csi_process(const int8_t *csi_data, int length);
+// [1] END OF YOUR CODE
  
+typedef struct {
+    int16_t data[BUFFER_SIZE][FRAME_LENGTH];
+    int64_t timestamps[BUFFER_SIZE];
+    int write_index;
+    int count;
+    int consecutive_motion_count;
+    int consecutive_static_count;
+    bool motion_detected;
+ } CSIBUFFER;
+
+ static CSIBUFFER csi_buffer = {
+    .write_index = 0,
+    .count = 0,
+    .consecutive_motion_count = 0,
+    .consecutive_static_count = 0,
+    .motion_detected = false
+};
  
  // [2] YOUR CODE HERE
  // Modify the following functions to implement your algorithms.
  // NOTE: Please do not change the function names and return types.
+
+ static double get_amplitude(int16_t imaginary, int16_t real) {
+    return sqrt(imaginary * imaginary + real * real);
+ }
+
+ static double get_median(double* array, int size) {
+    for (int i = 0; i < size - 1; i++) {
+        for (int j = 0; j < size - i - 1; j++) {
+            if (array[j] > array[j + 1]) {
+                double temp = array[j];
+                array[j] = array[j + 1];
+                array[j + 1] = temp;
+            }
+        }
+    }
+    
+    if (size % 2 == 0) {
+        return (array[size/2 - 1] + array[size/2]) / 2.0;
+    } else {
+        return array[size/2];
+    }
+ }
+ 
  bool motion_detection() {
-    if (CSI_Q_INDEX < CSI_FIFO_LENGTH) {
-        return false;  // 数据不足,返回无运动
+     // TODO: Implement motion detection logic using CSI data in CSI_Q
+     if (csi_buffer.count < 2) {
+        return false;
+     }
+
+     int n = N_SUBCARRIERS;
+     double* variations = (double*)malloc(n * sizeof(double));
+     int count = 0;
+
+     for (int i = 0; i < n; i++) {
+        double* amplitudes = (double*)malloc(csi_buffer.count * sizeof(double));
+
+        for (int j = 0; j < csi_buffer.count; j++) {
+            int real_idx = i * 2;
+            int imaginary_idx = i * 2 + 1;
+            amplitudes[j] = get_amplitude(csi_buffer.data[j][real_idx], csi_buffer.data[j][imaginary_idx]);
+        }
+
+        double mean = 0.0;
+        for (int j = 0; j < csi_buffer.count; j++) {
+            mean += amplitudes[j]; 
+        }
+        mean /= csi_buffer.count;
+
+        if (mean > 0) {
+            double sum_diff = 0;
+            for (int j = 1; j < csi_buffer.count; j++) {
+                sum_diff += fabs(amplitudes[j] - amplitudes[j - 1]);
+            }
+            double mean_diff = sum_diff / (csi_buffer.count - 1);
+            double var1 = mean_diff / mean;
+
+            double sq_diff = 0;
+            for (int j = 0; j < csi_buffer.count; j++) {
+                sq_diff += pow(amplitudes[j] - mean, 2);
+            }
+            double std = sqrt(sq_diff / csi_buffer.count);
+            double var2 = std / mean;
+
+            variations[count++] = fmax(var1, var2);
+        }
+
+        free(amplitudes);
+     }
+
+     double median_var = get_median(variations, count);
+     double max_variation = 0;
+     for (int i = 0; i < count; i++) {
+        if (variations[i] > max_variation) {
+            max_variation = variations[i];
+        }
+     }
+
+     bool raw_motion = (median_var > MOTION_THRESHOLD * 0.8 && max_variation > MOTION_THRESHOLD);
+     if (raw_motion) {
+        csi_buffer.consecutive_motion_count++;
+        csi_buffer.consecutive_static_count = 0;
+     } else {
+        csi_buffer.consecutive_motion_count = 0;
+        csi_buffer.consecutive_static_count++;
+     }
+
+     bool motion;
+     if (csi_buffer.consecutive_motion_count >= CONFIRMATION_THRESHOLD) {
+        motion = true;
+    } else if (csi_buffer.consecutive_static_count >= CONFIRMATION_THRESHOLD) {
+        motion = false;
+    } else {
+        motion = csi_buffer.motion_detected;
     }
 
-    // 计算最近CSI_FIFO_LENGTH个样本的方差
-    float mean = 0.0;
-    float variance = 0.0;
-    int start_idx = CSI_Q_INDEX - CSI_FIFO_LENGTH;
+    csi_buffer.motion_detected = motion;
     
-    // 计算均值
-    for (int i = 0; i < CSI_FIFO_LENGTH; i++) {
-        mean += CSI_Q[start_idx + i];
-    }
-    mean /= CSI_FIFO_LENGTH;
+    free(variations);
+    ESP_LOGI(TAG, "Motion detection: %s (variation: %.6f)", 
+             motion ? "MOTION" : "NO MOTION", max_variation);
     
-    // 计算方差
-    for (int i = 0; i < CSI_FIFO_LENGTH; i++) {
-        float diff = CSI_Q[start_idx + i] - mean;
-        variance += diff * diff;
-    }
-    variance /= CSI_FIFO_LENGTH;
-
-    // 设定方差阈值,超过阈值判定为有运动
-    const float VARIANCE_THRESHOLD = 100.0;  
-    return (variance > VARIANCE_THRESHOLD);
-}
+    return motion;
+ }
  
  int breathing_rate_estimation() {
      // TODO: Implement breathing rate estimation using CSI data in CSI_Q
-     return 0;
+     if (csi_buffer.count < 5) {
+        return 0;
+     }
+
+    int *peaks = (int *)malloc(csi_buffer.count * sizeof(int));
+    int *valleys = (int *)malloc(csi_buffer.count * sizeof(int));
+    double *amplitudes = (double *)malloc(csi_buffer.count * sizeof(double));
+    double *filtered = (double *)malloc(csi_buffer.count * sizeof(double));
+
+    if (!peaks || !valleys || !amplitudes || !filtered) {
+        ESP_LOGE(TAG, "Memory allocation failed for breathing rate calculation");
+        if (peaks) free(peaks);
+        if (valleys) free(valleys);
+        if (amplitudes) free(amplitudes);
+        if (filtered) free(filtered);
+        return 0;
+    }
+
+    double b[5] = {0.00011905, 0.0, -0.00023809, 0.0, 0.00011905};
+    double a[5] = {1.0, -3.96831469, 5.90601698, -3.90708066, 0.96937846};
+
+    int subcarrier = 30;
+
+    for (int i = 0; i < csi_buffer.count; i++) {
+        int real_idx = subcarrier * 2;
+        int imaginary_idx = subcarrier * 2 + 1;
+        amplitudes[i] = get_amplitude(csi_buffer.data[i][real_idx], 
+                                     csi_buffer.data[i][imaginary_idx]);
+    }
+
+    for (int i = 0; i < csi_buffer.count; i++) {
+        filtered[i] = 0.0;
+        for (int j = 0; j <= 4; j++) { // Filter order 4
+            if (i - j >= 0) filtered[i] += b[j] * amplitudes[i - j];
+            if (j > 0 && i - j >= 0) filtered[i] -= a[j] * filtered[i - j];
+        }
+    }
+
+    int num_peaks = 0, num_valleys = 0;
+    for (int i = 1; i < csi_buffer.count - 1; i++) {
+        if (filtered[i] > filtered[i-1] && filtered[i] > filtered[i+1]) {
+            peaks[num_peaks++] = i;
+        }
+        if (filtered[i] < filtered[i-1] && filtered[i] < filtered[i+1]) {
+            valleys[num_valleys++] = i;
+        }
+    }
+
+    int bpm = 0;
+    if (num_peaks > 1) {
+        // Calculate average time between peaks
+        int64_t total_time_diff = 0;
+        for (int i = 1; i < num_peaks; i++) {
+            int peak_idx1 = peaks[i-1];
+            int peak_idx2 = peaks[i];
+            int64_t time_diff = csi_buffer.timestamps[peak_idx2] - csi_buffer.timestamps[peak_idx1];
+            total_time_diff += time_diff;
+        }
+        
+        if (num_peaks > 1 && total_time_diff > 0) {
+            // Average time per breath in milliseconds
+            double avg_breath_time = (double)total_time_diff / (num_peaks - 1);
+            
+            // Convert to breaths per minute
+            bpm = (int)(60000.0 / avg_breath_time);
+            
+            // Sanity check for expected breathing rate range (6-30 breaths per minute)
+            if (bpm < 6 || bpm > 30) {
+                ESP_LOGW(TAG, "Calculated breathing rate out of expected range: %d BPM", bpm);
+                bpm = 0; // Invalid result
+            } else {
+                ESP_LOGI(TAG, "Breathing rate: %d BPM (from %d peaks)", bpm, num_peaks);
+            }
+        }
+    }
+    
+    // Free allocated memory
+    free(peaks);
+    free(valleys);
+    free(amplitudes);
+    free(filtered);
+    
+    return bpm;
  }
  
  static void mqtt_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
@@ -121,16 +303,27 @@
 }
  
  void mqtt_init() {
-     esp_mqtt_client_config_t mqtt_config = {
+    ESP_LOGI(TAG, "Entering mqtt_init function");
+    esp_mqtt_client_config_t mqtt_config = {
          .broker.address.uri = MQTT_BROKER_URI,
+         .broker.address.port = MQTT_PORT,
      };
  
-     client = esp_mqtt_client_init(&mqtt_config);
-     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-     esp_mqtt_client_start(client);
+    ESP_LOGI(TAG, "Before esp_mqtt_client_init");
+    client = esp_mqtt_client_init(&mqtt_config);
+    if (client == NULL) {
+        ESP_LOGE(TAG, "esp_mqtt_client_init failed");
+    } else {
+        ESP_LOGI(TAG, "esp_mqtt_client_init success");
+    }
+    ESP_LOGI(TAG, "Before esp_mqtt_client_register_event");
+    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    ESP_LOGI(TAG, "After esp_mqtt_client_register_event");
+    esp_mqtt_client_start(client);
+    ESP_LOGI(TAG, "After esp_mqtt_client_start");
  }
  
- void mqtt_send(const char *data) {
+ void mqtt_send(const char* data) {
      // TODO: Implement MQTT message sending using CSI data or Results
      // NOTE: If you implement the algorithm on-board, you can return the results to the host, else send the CSI data.
      if (!client) {
@@ -170,8 +363,9 @@
  #endif /*CONFIG_EXAMPLE_SCAN_METHOD*/
  //
  
- static const uint8_t CONFIG_CSI_SEND_MAC[] = {0x1a, 0x00, 0x00, 0x00, 0x00, 0x00};
+ static const uint8_t CONFIG_CSI_SEND_MAC[] = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0x00};
  
+ static const char *TAG = "csi_recv";
  typedef struct
  {
      unsigned : 32; /**< reserved */
@@ -310,14 +504,14 @@
  
      // Applying the CSI_Q_ENABLE flag to determine the output method
      // 1: Enable, using buffer, 0: Disable, using serial output
-     if (!CSI_Q_ENABLE) {
-         ets_printf("CSI_DATA,%d," MACSTR ",%d,%d,%d,%d\n",
-                    info->len, MAC2STR(info->mac), info->rx_ctrl.rssi,
-                    info->rx_ctrl.rate, info->rx_ctrl.noise_floor,
-                    info->rx_ctrl.channel);
-     } else {
-         csi_process(info->buf, info->len);
-     }
+    //  if (!CSI_Q_ENABLE) {
+    //      ets_printf("CSI_DATA,%d," MACSTR ",%d,%d,%d,%d\n",
+    //                 info->len, MAC2STR(info->mac), info->rx_ctrl.rssi,
+    //                 info->rx_ctrl.rate, info->rx_ctrl.noise_floor,
+    //                 info->rx_ctrl.channel);
+    //  } else {
+    //      csi_process(info->buf, info->len);
+    //  }
  
      
      if (!info || !info->buf) {
@@ -358,7 +552,7 @@
      const wifi_pkt_rx_ctrl_t *rx_ctrl = &info->rx_ctrl;
      if (CSI_Q_ENABLE == 0) {
          ESP_LOGI(TAG, "================ CSI RECV via Serial Port ================");
-         ets_printf("CSI_DATA,%d," MACSTR ",%d,%d,%d,%d,%d,%d,%d,%d,%d",
+         ets_printf("%d," MACSTR ",%d,%d,%d,%d,%d,%d,%d,%d,%d",
              s_count++, MAC2STR(info->mac), rx_ctrl->rssi, rx_ctrl->rate,
              rx_ctrl->noise_floor, phy_info->fft_gain, phy_info->agc_gain, rx_ctrl->channel,
              rx_ctrl->timestamp, rx_ctrl->sig_len, rx_ctrl->rx_state);
@@ -379,23 +573,45 @@
  //------------------------------------------------------CSI Processing & Algorithms------------------------------------------------------
  static void csi_process(const int8_t *csi_data, int length)
  {   
-     if (CSI_Q_INDEX + length > CSI_BUFFER_LENGTH) {
-         int shift_size = CSI_BUFFER_LENGTH - CSI_FIFO_LENGTH;
-         memmove(CSI_Q, CSI_Q + CSI_FIFO_LENGTH, shift_size * sizeof(int16_t));
-         CSI_Q_INDEX = shift_size;
-     }    
-     ESP_LOGI(TAG, "CSI Buffer Status: %d samples stored", CSI_Q_INDEX);
-     // Append new CSI data to the buffer
-     for (int i = 0; i < length && CSI_Q_INDEX < CSI_BUFFER_LENGTH; i++) {
-         CSI_Q[CSI_Q_INDEX++] = (int16_t)csi_data[i];
-     }
+    static int64_t last_motion_time = 0;
+    static int64_t last_breathing_time = 0;
+    int64_t current_time = esp_timer_get_time() / 1000;
+
+    int write_idx = csi_buffer.write_index;
+    for (int i = 0; i < length; i++) {
+        csi_buffer.data[write_idx][i] = (int16_t)csi_data[i];
+    }
+    csi_buffer.timestamps[write_idx] = current_time;
+    
+    csi_buffer.write_index = (write_idx + 1) % BUFFER_SIZE;
+    if (csi_buffer.count < BUFFER_SIZE) {
+        csi_buffer.count++;
+    }
+
+    // 每500ms进行一次运动检测
+    if (current_time - last_motion_time >= 500) {
+        bool motion = motion_detection();
+        const char* str_motion = motion ? "true" : "false";
+        mqtt_send(str_motion);
+        last_motion_time = current_time;
+    }
+
+    if (current_time - last_breathing_time >= 10000) {
+        int breathing_rate = breathing_rate_estimation();
+        if (breathing_rate > 0) {
+            char breath_msg[32];
+            snprintf(breath_msg, sizeof(breath_msg), "{\"bpm\":%d}", breathing_rate);
+            mqtt_send(breath_msg);
+        }
+        last_breathing_time = current_time;
+    }
  
      // [4] YOUR CODE HERE
  
      // 1. Fill the information of your group members
      ESP_LOGI(TAG, "================ GROUP INFO ================");
-     const char *TEAM_MEMBER[] = {"JIANG Feiyu", "Wang Shiwei", "Cao Shuochen", "Wu Jiaxu"};
-     const char *TEAM_UID[] = {"3035770800", "3036410392", "3", "4"};
+     const char *TEAM_MEMBER[] = {"a", "b", "c", "d"};
+     const char *TEAM_UID[] = {"1", "2", "3", "4"};
      ESP_LOGI(TAG, "TEAM_MEMBER: %s, %s, %s, %s | TEAM_UID: %s, %s, %s, %s",
                  TEAM_MEMBER[0], TEAM_MEMBER[1], TEAM_MEMBER[2], TEAM_MEMBER[3],
                  TEAM_UID[0], TEAM_UID[1], TEAM_UID[2], TEAM_UID[3]);
@@ -403,14 +619,14 @@
  
      // 2. Call your algorithm functions here, e.g.: motion_detection(), breathing_rate_estimation(), and mqtt_send()
      // If you implement the algorithm on-board, you can return the results to the host, else send the CSI data.
-     // motion_detection();
-     // breathing_rate_estimation();
-     // mqtt_send();
+    //  motion_detection();
+    //  breathing_rate_estimation();
+    //  mqtt_send();
      char csi_message[1024]; // 注意缓冲区大小需要足够大以存储CSI数据
      int offset = 0;
  
      // 构造CSI数据字符串
-     offset += snprintf(csi_message + offset, sizeof(csi_message) - offset, "CSI_DATA: ");
+     offset += snprintf(csi_message + offset, sizeof(csi_message) - offset, "[");
      for (int i = 0; i < length; i++) {
          offset += snprintf(csi_message + offset, sizeof(csi_message) - offset, "%d,", csi_data[i]);
          if (offset >= sizeof(csi_message)) {
@@ -418,6 +634,7 @@
              break;
          }
      }
+     offset += snprintf(csi_message + offset, sizeof(csi_message) - offset, "]");
  
      // 移除最后一个多余的逗号（如果存在）
      if (offset > 0 && csi_message[offset - 1] == ',') {
@@ -428,7 +645,8 @@
      ESP_LOGI(TAG, "发送的CSI数据: %s", csi_message);
  
      // 调用mqtt_send函数发送数据
-     mqtt_send(csi_message);
+     
+     //mqtt_send(str_motion);
      // [4] END YOUR CODE HERE
  }
  
@@ -511,9 +729,10 @@
              .encrypt   = false,
              .peer_addr = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
          };
- 
+         
          wifi_esp_now_init(peer); // Initialize ESP-NOW Communication
          wifi_csi_init(); // Initialize CSI Collection
+         mqtt_init();
  
      } else {
          ESP_LOGI(TAG, "WiFi connection failed");

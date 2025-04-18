@@ -18,7 +18,7 @@ def read_csi_data_md(inpt):
     return amplitude
 
 if __name__ == '__main__':
-    path = './benchmark/motion_detection/evaluation_static/'
+    path = './benchmark/motion_detection/test/'
     csv_files = [f for f in os.listdir(path) if f.endswith('.csv')]
     for csv_file in csv_files:
         inpt = os.path.join(path, csv_file)
