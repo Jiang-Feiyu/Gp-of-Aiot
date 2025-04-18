@@ -2,6 +2,13 @@
 
 This repository contains the code and resources for an AIoT (Artificial Intelligence of Things) project.
 
+## Demo Video
+- [Connection Demo]
+- [Monitoring & Breathing Function Demo]
+
+[Connection Demo]: https://youtu.be/0062GpkVOzM
+[Monitoring & Breathing Function Demo]:https://youtu.be/tf9VvY734YM
+
 ## Project Structure
 ```
 .
