@@ -23,10 +23,9 @@ This repository contains the code and resources for an AIoT (Artificial Intellig
 └── web/ - Data visualization interface
 ```
 
-- The breathing and motion function is written in `./esp32c5/csi_recv/main/app_main.c`
-- The final report is in `.final_report/final_report.pdf`
-- For comprehensive project details, please refer to:  
-[Group Project Documentation](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/doc/group_project_2025.md)
+- The breathing and motion function is written in [./main/esp32c5/csi_recv/main/app_main.c](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/esp32c5/csi_recv/main/app_main.c)
+- The final report is in: [final_report.pdf](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/final_report/final_report.pdf)
+- For comprehensive project details, please refer to: [Group Project Documentation](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/doc/group_project_2025.md)
 
 ## Getting Started
 
