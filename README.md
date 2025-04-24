@@ -17,19 +17,19 @@ This repository contains the code and resources for an AIoT (Artificial Intellig
 ├── benchmark/ - Dataset for benchmarking
 ├── breathing_rate/ - Breathing rate detection code
 ├── doc/ - Documentation
-├── esp32c5/ - ESP32-C5 related code
+├── esp32c5/ - ESP32-C5, including sending and recieving
 ├── final_report/ - Final report (LaTeX format)
 ├── motion_detection/ - Motion detection algorithms
 └── web/ - Data visualization interface
 ```
 
-## Detailed Documentation
-
-For comprehensive project details, please refer to:  
+- The breathing and motion function is written in `./esp32c5/csi_recv/main/app_main.c`
+- The final report is in `.final_report/final_report.pdf`
+- For comprehensive project details, please refer to:  
 [Group Project Documentation](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/doc/group_project_2025.md)
 
 ## Getting Started
 
 1. Clone this repository
-2. Navigate to the specific module directory for implementation details
+2. Navigate to the `esp32c5` floder, the sender and reviever is stored respectivly in `.esp32c5/csi_send` and `./esp32c5/csi_recv`
 3. Refer to the final report for project overview and results

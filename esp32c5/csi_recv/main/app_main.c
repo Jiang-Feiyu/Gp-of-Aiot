@@ -610,8 +610,8 @@ typedef struct {
  
      // 1. Fill the information of your group members
      ESP_LOGI(TAG, "================ GROUP INFO ================");
-     const char *TEAM_MEMBER[] = {"a", "b", "c", "d"};
-     const char *TEAM_UID[] = {"1", "2", "3", "4"};
+     const char *TEAM_MEMBER[] = {"JIANG FEIYU", "Cao Shuochen", "Wu Jiaxu", "Wang Shiwei"};
+     const char *TEAM_UID[] = {"3035770800", "3036382961", "3036410330", "3036410392"};
      ESP_LOGI(TAG, "TEAM_MEMBER: %s, %s, %s, %s | TEAM_UID: %s, %s, %s, %s",
                  TEAM_MEMBER[0], TEAM_MEMBER[1], TEAM_MEMBER[2], TEAM_MEMBER[3],
                  TEAM_UID[0], TEAM_UID[1], TEAM_UID[2], TEAM_UID[3]);
