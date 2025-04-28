@@ -22,7 +22,6 @@ This repository contains the code and resources for an AIoT (Artificial Intellig
 ```
 .
 ├── CSI/ - CSI-related code
-├── MQTT_Test/ - MQTT testing code # Please Ignore
 ├── benchmark/ - Dataset for benchmarking
 ├── breathing_rate/ - Breathing rate detection code
 ├── doc/ - Documentation
@@ -32,12 +31,7 @@ This repository contains the code and resources for an AIoT (Artificial Intellig
 └── web/ - Data visualization interface
 ```
 
-- The breathing and motion function is written in [.esp32c5/csi_recv/main/app_main.c](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/esp32c5/csi_recv/main/app_main.c)
 - The final report is in: [final_report.pdf](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/final_report/final_report.pdf)
+- Navigate to the `esp32c5` floder, the sender and reviever is stored respectivly in `.esp32c5/csi_send` and `./esp32c5/csi_recv`.
+- The breathing and motion function is written in [.esp32c5](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/esp32c5). The algorithm is also seperated for testing in [.breathing_rate](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/breathing_rate) and [.motion_detection](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/motion_detection).
 - For comprehensive project details, please refer to: [Group Project Documentation](https://github.com/Jiang-Feiyu/Gp-of-Aiot/blob/main/doc/group_project_2025.md)
-
-## Getting Started
-
-1. Clone this repository
-2. Navigate to the `esp32c5` floder, the sender and reviever is stored respectivly in `.esp32c5/csi_send` and `./esp32c5/csi_recv`
-3. Refer to the final report for project overview and results
