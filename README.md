@@ -7,7 +7,7 @@ This repository contains the code and resources for an AIoT (Artificial Intellig
 | Name | UID |
 | --- | --- |
 | JIANG Feiyu | 3035770800 |
-| CAO Shuochen | 3036410392 |
+| CAO Shuochen | 3036382961 |
 | Wang Shiwei | 3036410392|
 | WU Jiaxu | 3036410330 |
 
